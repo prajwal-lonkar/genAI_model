@@ -4,17 +4,55 @@ import dotenv from 'dotenv';
 dotenv.config();
 const openai = new OpenAI();
 
-async function run() {
+type Context = {
+    role: 'user' | 'assistant' | 'system';
+    content: string
+}[]
+
+const context: Context = [{
+    role: 'system',
+    content: 'You are a helpful assistant'
+},
+{
+    role: 'user',
+    content: 'Hello, how are you?'
+}];
+
+async function chatCompletion() {
     const response = await openai.chat.completions.create({
+        messages: context,
         model: 'gpt-4o-mini',
-        messages: [
-            {
-                role: 'user',
-                content: "Hello, how are you?"
-            }
-        ] 
-    })
-    console.log(response.choices[0].message.content);
+    });
+    const responseMessage = response.choices[0].message;    
+    context.push({
+        role: 'assistant',
+        content: responseMessage.content || ''
+    });
+    console.log(`Assistant: ${response.choices[0].message.role},  ${response.choices[0].message.content}`);
+}
+
+async function run() {
+    const input = require("prompt-sync")({ sigint: true });
+
+    while (true) {
+        const userInput = input() as string;
+        if (userInput.toLowerCase() === 'exit') {
+            console.log("Exiting chat...");
+            break;
+        }
+        context.push({
+            role: 'user',
+            content: userInput
+        });
+
+        await chatCompletion();
+    }
 }
 
 run();
+
+/**
+ *  To run the model
+ *  1. tsc -w  --> Run this command on one terminal . /dist folder will be generated.
+ *  2. On another terminal run ---> npm run dev.
+ */
