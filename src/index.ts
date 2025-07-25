@@ -1,58 +1,69 @@
-import { OpenAI } from 'openai';
-import dotenv from 'dotenv';
+/**
+ *  Basically a model cannot provide real time information as its trained on data
+ *  of the past . For such scenarios 'tools' are created, to provide real time data.
+ */
+import { OpenAI } from "openai";
+import dotenv from "dotenv";
 
 dotenv.config();
 const openai = new OpenAI();
 
-type Context = {
-    role: 'user' | 'assistant' | 'system';
-    content: string
-}[]
-
-const context: Context = [{
-    role: 'system',
-    content: 'You are a helpful assistant'
-},
-{
-    role: 'user',
-    content: 'Hello, how are you?'
-}];
-
-async function chatCompletion() {
-    const response = await openai.chat.completions.create({
-        messages: context,
-        model: 'gpt-4o-mini',
-    });
-    const responseMessage = response.choices[0].message;    
-    context.push({
-        role: 'assistant',
-        content: responseMessage.content || ''
-    });
-    console.log(`Assistant: ${response.choices[0].message.role},  ${response.choices[0].message.content}`);
+// Creating our own tool to get current time of New York
+async function getTimeInNewYork() {
+  return new Date().toLocaleString("en-Us", {
+    timeZone: "America/New_York",
+  });
 }
+async function callOpenAITool() {
+  const context: OpenAI.ChatCompletionMessageParam[] = [
+    {
+      role: "system",
+      content: "You are helpful assistant.",
+    },
+    {
+      role: "user",
+      content: "What is current time in New York?",
+    },
+  ];
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: context,
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: "getTimeInNewYork",
+          description: "Get current time in New York.",
+        },
+      },
+    ],
+    tool_choice:'auto'   // tool decision
+  });
 
-async function run() {
-    const input = require("prompt-sync")({ sigint: true });
+  // step-2 decide tool to use/call
+  const willInvokeTheTool = response.choices[0].finish_reason === 'tool_calls';
+  const toolCall = response.choices[0].message.tool_calls?.[0];
 
-    while (true) {
-        const userInput = input() as string;
-        if (userInput.toLowerCase() === 'exit') {
-            console.log("Exiting chat...");
-            break;
-        }
+  if(willInvokeTheTool){
+    const toolName= toolCall?.function.name;
+    if(toolName === 'getTimeInNewYork'){
+        const time = await getTimeInNewYork();
+
+        context.push(response.choices[0].message);
         context.push({
-            role: 'user',
-            content: userInput
-        });
-
-        await chatCompletion();
+            role:'tool',
+            content:time,
+            tool_call_id:toolCall?.id ?? '',
+        })
     }
+  }
+
+const secondResponse = await openai.chat.completions.create({
+    model:"gpt-4o-mini",
+    messages: context
+})
+
+  console.log(secondResponse.choices[0].message.content);
 }
 
-run();
-
-/**
- *  To run the model
- *  1. tsc -w  --> Run this command on one terminal . /dist folder will be generated.
- *  2. On another terminal run ---> npm run dev.
- */
+callOpenAITool();
