@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@chroma-core/openai": "^0.1.7",
     "dotenv": "^17.2.0",
     "openai": "^5.10.2",
     "prompt-sync": "^4.2.0"
