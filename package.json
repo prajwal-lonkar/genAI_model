@@ -10,10 +10,11 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@chroma-core/openai": "^0.1.7",
-    "dotenv": "^17.2.0",
-    "openai": "^5.10.2",
-    "prompt-sync": "^4.2.0"
+    "@langchain/community": "^0.3.49",
+    "@langchain/core": "^0.3.66",
+    "@langchain/openai": "^0.6.3",
+    "dotenv": "^16.0.3",
+    "langchain": "^0.3.30"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",
